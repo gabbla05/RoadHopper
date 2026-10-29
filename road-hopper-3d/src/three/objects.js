@@ -7,61 +7,50 @@ import { makeInstance } from './modelLoader.js';
 export const GROUND_Y = -0.45;
 
 // Obiekt przechowujący referencje do obiektów Three.js na scenie
+// Laboratorium 5 - Sekcja 5.1: Dodanie rows: new Map()
 export const objects = {
     playerRoot: null,
     cars: [],
-    trees: []
+    trees: [],
+    rows: new Map(),
 };
 
-// Laboratorium 4 - Sekcja 5.2 i 5.3: Utworzenie pasów planszy oraz domyślnej postaci gracza
-export function createBasicObjects(scene3D) {
-    // Szerokość planszy 3.6 (zgodna z WebGL2 scale.x = 3.6 oraz CAR_WRAP_EDGE = 1.6 w gameLogic.js),
-    // dzięki czemu drzewa (x = +/-1.65) stoją stabilnie na pasie zieleni, a auta nie wyjeżdżają poza drogę.
-    const BOARD_WIDTH = 3.6;
+// Laboratorium 5 - Sekcja 5.2: Wspólna geometria oraz materiały dla pasów i linii
+const rowGeometry = new THREE.BoxGeometry(1.8, 0.04, 0.35);
+const rowMaterials = {
+    road: new THREE.MeshBasicMaterial({ color: 0x30323a }),
+    grass: new THREE.MeshBasicMaterial({ color: 0x2ba344 }),
+};
+const lineGeometry = new THREE.BoxGeometry(0.15, 0.006, 0.018);
+const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-    // Segmenty przerywanej linii na środku drogi rozdzielającej dwa pasy ruchu
-    const dashGeometry = new THREE.BoxGeometry(0.27, 0.041, 0.025);
-    const dashMaterial = new THREE.MeshBasicMaterial({ color: 0xebe1ad });
+// Laboratorium 5 - Sekcja 5.2: Funkcja tworząca pojedynczy pas terenu
+export function addRowVisual(scene3D, row) {
+    const root = new THREE.Group();
+    const mesh = new THREE.Mesh(rowGeometry, rowMaterials[row.type]);
+    mesh.position.set(0, GROUND_Y - 0.02, row.z);
+    root.add(mesh);
 
-    // Kreska oddzielająca pasy zieleni
-    const grassLineGeometry = new THREE.BoxGeometry(BOARD_WIDTH, 0.041, 0.025);
-    const grassLineMaterial = new THREE.MeshBasicMaterial({ color: 0x141b26 });
-
-    for (const row of rows) {
-        // Zachowanie koloru z danych sceny (np. pas mety z row.color) lub domyślne kolory drogi i trawy
-        let color;
-        if (row.type === 'road') {
-            color = 0x30323a;
-        } else if (row.color) {
-            color = new THREE.Color(row.color[0], row.color[1], row.color[2]);
-        } else {
-            color = 0x2ba344;
+    const previous = rows.find(r => r.laneIndex === row.laneIndex - 1);
+    if (row.type === 'road' && previous?.type === 'road' &&
+        Math.abs(previous.z - row.z - 0.35) < 0.001) {
+        const lineZ = (previous.z + row.z) / 2;
+        for (let x = -0.75; x <= 0.75; x += 0.30) {
+            const line = new THREE.Mesh(lineGeometry, lineMaterial);
+            line.position.set(x, GROUND_Y + 0.003, lineZ);
+            root.add(line);
         }
-
-        // Laboratorium 4 - Zadanie 3: Droga dwupasmowa
-        // Każdy z dwóch pasów jezdni ma głębokość 0.34 (stykają się na z = 0.00), a pasy trawy 0.65
-        const rowDepth = row.type === 'road' ? 0.34 : 0.65;
-        const rowGeometry = new THREE.BoxGeometry(BOARD_WIDTH, 0.04, rowDepth);
-
-        const rowMesh = new THREE.Mesh(
-            rowGeometry,
-            new THREE.MeshBasicMaterial({ color })
-        );
-        rowMesh.position.set(0, GROUND_Y - 0.02, row.z);
-        scene3D.add(rowMesh);
     }
 
-    // Przerywana linia na środku jezdni (na styku dwóch pasów ruchu przy z = 0.00)
-    for (let x = -1.62; x <= 1.62; x += 0.54) {
-        const dashMesh = new THREE.Mesh(dashGeometry, dashMaterial);
-        dashMesh.position.set(x, GROUND_Y - 0.02 + 0.001, 0.00);
-        scene3D.add(dashMesh);
-    }
+    scene3D.add(root);
+    objects.rows.set(row.laneIndex, root);
+}
 
-    // Kreska oddzielająca pasy zieleni (na granicy między sąsiednimi pasami zieleni przy z = -1.05)
-    const grassSeparator = new THREE.Mesh(grassLineGeometry, grassLineMaterial);
-    grassSeparator.position.set(0, GROUND_Y - 0.02 + 0.001, -1.05);
-    scene3D.add(grassSeparator);
+// Laboratorium 5 - Sekcja 5.3: Utworzenie początkowej planszy przy użyciu addRowVisual()
+export function createBasicObjects(scene3D) {
+    for (const row of rows) {
+        addRowVisual(scene3D, row);
+    }
 
     // Sekcja 5.3: Utworzenie żółtej postaci gracza złożonej z dwóch brył (tułów i głowa) w grupie playerRoot
     const playerRoot = new THREE.Group();
@@ -117,23 +106,28 @@ export function rotatePlayer(key) {
     }
 }
 
-// Laboratorium 4 - Sekcja 6.1: Dodanie samochodów i drzew
+// Laboratorium 5 - Sekcja 6.1: Funkcje tworzące pojedyncze instancje modeli
+export function addCarVisual(scene3D, car, carTemplate) {
+    const root = makeInstance(carTemplate, 0.40);
+    root.rotation.y = car.speed < 0 ? Math.PI / 2 : -Math.PI / 2;
+    scene3D.add(root);
+    objects.cars.push(root);
+}
+
+export function addTreeVisual(scene3D, tree, treeTemplate) {
+    const root = makeInstance(treeTemplate, 0.70);
+    scene3D.add(root);
+    objects.trees.push(root);
+}
+
+// Laboratorium 4 & 5 - Sekcja 6.2: Zastąpienie tworzenia modeli wywołaniami addCarVisual i addTreeVisual
 export function addModels(scene3D, carTemplate, treeTemplate) {
-    // Utworzenie instancji modeli samochodów i dopasowanie ich rotacji
     for (const car of gameScene.cars) {
-        const root = makeInstance(carTemplate, 0.40);
-        root.rotation.y = car.speed > 0
-            ? Math.PI / 2
-            : -Math.PI / 2;
-        scene3D.add(root);
-        objects.cars.push(root);
+        addCarVisual(scene3D, car, carTemplate);
     }
 
-    // Utworzenie instancji modeli drzew
     for (const tree of gameScene.trees) {
-        const root = makeInstance(treeTemplate, 0.70);
-        scene3D.add(root);
-        objects.trees.push(root);
+        addTreeVisual(scene3D, tree, treeTemplate);
     }
 }
 
