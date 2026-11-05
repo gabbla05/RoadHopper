@@ -16,13 +16,15 @@ const lanes = rows.map(row => row.z).sort((a, b) => b - a);
 
 // Laboratorium 5 - Sekcja 6.4: Aktualizacja poziomu trudności dla aut początkowych i dynamicznych
 export function updateDifficulty() {
- const factor = 1 + gameState.score / 100;
+ const factor = 1 + gameState.score / 250;
  gameState.speedMultiplier = factor;
  scene.cars.forEach((car, index) => {
   const baseSpeed = index < startSpeeds.length
    ? startSpeeds[index]
    : car.baseSpeed;
-  car.speed = baseSpeed * factor;
+  const speed = baseSpeed * factor;
+  car.speed = speed;
+  car.desiredSpeed = speed;
  });
 }
 
@@ -73,6 +75,7 @@ export function restartGame() {
  scene.cars.slice(0, startCars.length).forEach((car, index) => {
   car.position.splice(0, 3, ...startCars[index]);
   car.speed = startSpeeds[index];
+  car.desiredSpeed = startSpeeds[index];
  });
  gameState.status = 'playing';
  gameState.score = 0;

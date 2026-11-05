@@ -25,6 +25,9 @@ const canvas = document.querySelector('#gameCanvas');
 const scoreLabel = document.querySelector('#score');
 const bestScoreLabel = document.querySelector('#bestScore');
 const livesLabel = document.querySelector('#lives');
+// Laboratorium 5 - Zadanie 3: Odwołania do liczników kontroli złożoności świata
+const lanesLabel = document.querySelector('#lanesCount');
+const carsLabel = document.querySelector('#carsCount');
 const statusLabel = document.querySelector('#status');
 
 // Laboratorium 4 - Sekcja 3.3: Inicjalizacja sceny, renderera oraz kamery Three.js
@@ -120,6 +123,9 @@ function updateHud() {
     bestScoreLabel.textContent = `Najlepszy wynik: ${gameState.bestScore}`;
     // HUD: odświeżanie liczby pozostałych żyć.
     livesLabel.textContent = `Życia: ${gameState.lives}`;
+    // Laboratorium 5 - Zadanie 3: Bieżąca liczba aktywnych pasów oraz aut na planszy
+    if (lanesLabel) lanesLabel.textContent = `Aktywne pasy: ${rows.length}`;
+    if (carsLabel) carsLabel.textContent = `Aktywne auta: ${scene.cars.length}`;
     if (gameState.status === 'lost') {
         statusLabel.textContent = 'Kolizja! Naciśnij R.';
     } else if (gameState.status === 'won') {
@@ -127,7 +133,7 @@ function updateHud() {
     } else if (isPaused) {
         statusLabel.textContent = 'Pauza (P lub Spacja).';
     } else {
-        statusLabel.textContent = 'Dotrzyj do ostatniego pasa trawy.';
+        statusLabel.textContent = 'Dotrzyj jak najdalej.';
     }
 }
 

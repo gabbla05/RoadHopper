@@ -49,9 +49,10 @@ export function extendWorld(scene3D, carTemplate, treeTemplate) {
         // Sekcja 6.3: Dynamiczne tworzenie aut i drzew
         if (type === 'road') {
             const direction = Math.random() < 0.5 ? -1 : 1;
-            const baseSpeed = direction * (0.28 + Math.random() * 0.20);
+            // Lekko przyspieszona prędkość aut dla lepszej dynamiki
+            const baseSpeed = direction * (0.18 + Math.random() * 0.12);
             const car = {
-                position: [Math.random() * 1.6 - 0.8, 0, row.z],
+                position: [Math.random() * 1.8 - 0.9, 0, row.z],
                 speed: baseSpeed * (gameState.speedMultiplier || 1),
                 baseSpeed,
                 laneIndex: index
@@ -59,12 +60,32 @@ export function extendWorld(scene3D, carTemplate, treeTemplate) {
             gameScene.cars.push(car);
             addCarVisual(scene3D, car, carTemplate);
         } else {
-            const tree = {
-                position: [Math.random() < 0.5 ? -0.65 : 0.65, 0, row.z],
-                laneIndex: index
-            };
-            gameScene.trees.push(tree);
-            addTreeVisual(scene3D, tree, treeTemplate);
+            // Laboratorium 5 - Zadanie 1: Losowa liczba drzew (1-3) gwarantująca wolne przejścia
+            const numTrees = Math.floor(Math.random() * 3) + 1;
+            // Pula pozycji obejmująca skrajną lewą (-1.00), środek (0.00) i skrajną prawą (1.00)
+            const candidateSlots = [-1.00, -0.75, -0.50, -0.25, 0.00, 0.25, 0.50, 0.75, 1.00];
+            for (let i = candidateSlots.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [candidateSlots[i], candidateSlots[j]] = [candidateSlots[j], candidateSlots[i]];
+            }
+            
+            // Wybieramy pozycje z odstępem min. 0.45, by nie tworzyły ciągłego muru z drzew
+            const selectedSlots = [];
+            for (const slot of candidateSlots) {
+                if (selectedSlots.length >= numTrees) break;
+                if (selectedSlots.every(s => Math.abs(s - slot) >= 0.45)) {
+                    selectedSlots.push(slot);
+                }
+            }
+
+            for (const posX of selectedSlots) {
+                const tree = {
+                    position: [posX, 0, row.z],
+                    laneIndex: index
+                };
+                gameScene.trees.push(tree);
+                addTreeVisual(scene3D, tree, treeTemplate);
+            }
         }
     }
 
