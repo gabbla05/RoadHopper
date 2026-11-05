@@ -2,7 +2,8 @@ import { rows, scene } from './sceneData.js';
 
 // Laboratorium 5 - Sekcja 7.3: Stała określająca rozstaw pasów
 const STEP = 0.35;
-const ROAD_HALF_WIDTH = 1.2;
+// Laboratorium 6 - Sekcja 3.4: Dopasowanie granic drogi do nowej szerokości (5.0)
+const ROAD_HALF_WIDTH = 2.5;
 const CAR_HALF_WIDTH = 0.2;
 const CAR_WRAP_EDGE = ROAD_HALF_WIDTH - CAR_HALF_WIDTH;
 
@@ -12,9 +13,9 @@ export function toggleCarsPaused() {
     carsPaused = !carsPaused;
 }
 
-// Laboratorium 5 - Zadanie 2: Parametry bezpiecznego odstępu i zawijania pojazdów
-const SAFE_CAR_GAP = 0.52; // Bezpieczny odstęp między środkami aut w osi X
-const CAR_WRAP_BOUND = 1.20; // Granica zniknięcia z ekranu
+// Laboratorium 6 - Sekcja 3.4: Parametry bezpiecznego odstępu i zawijania pojazdów poza planszą
+const SAFE_CAR_GAP = 0.65; // Bezpieczny odstęp między środkami aut w osi X
+const CAR_WRAP_BOUND = 2.70; // Granica całkowitego zniknięcia poza krawędzią (2.50 + 0.20)
 
 export function updateCars(dt) {
     if (carsPaused) return;
@@ -66,7 +67,8 @@ export function movePlayer(key) {
 
     const p = scene.player.position;
     const stepX = 0.25;
-    const limitX = 1.0;
+    // Laboratorium 6 - Sekcja 3.3: Ograniczenie ruchu gracza (limitX = 0.75)
+    const limitX = 0.75;
     let targetX = p[0];
     let targetZ = p[2];
 

@@ -100,7 +100,15 @@ if (GAME_MODE === 'endless') {
 }
 
 // Laboratorium 4 - Zadanie 1: Podmiana żółtej postaci na model 3D character.glb
-setPlayerModel(scene3D, characterTemplate);
+const playerModel = setPlayerModel(scene3D, characterTemplate);
+
+let targetRotation = playerModel.rotation.y;
+
+// Laboratorium 6 - Sekcja 2.2.1: Parametry animacji skoku postaci
+const JUMP_DURATION = 0.25;
+let jumpTime = 0;
+let jumpStartX = 0;
+let jumpStartZ = 0;
 
 // Laboratorium 4 - Sekcja 3.5 oraz 6.4: Funkcja renderująca scenę z dopasowaniem rozmiaru i synchronizacją
 function render() {
@@ -148,11 +156,37 @@ function frame(time) {
         const livesBefore = gameState.lives;
         updateCars(dt);
         updateGameState();
-        if (GAME_MODE === 'endless' &&
-            gameState.lives < livesBefore &&
-            gameState.status === 'playing') {
-            resetWorld(scene3D, carTemplate, treeTemplate);
-            resetFollowCamera();
+        // Laboratorium 6 - Sekcja 2.2.4: Wyzerowanie animacji po utracie życia
+        if (gameState.lives < livesBefore) {
+            jumpTime = 0;
+            playerModel.position.y = 0;
+            playerModel.position.x = 0;
+            playerModel.position.z = 0;
+            if (GAME_MODE === 'endless' && gameState.status === 'playing') {
+                resetWorld(scene3D, carTemplate, treeTemplate);
+                resetFollowCamera();
+            }
+        }
+
+        // Laboratorium 6 - Sekcja 2.1.4: Płynny obrót postaci w kierunku targetRotation
+        const angle = playerModel.rotation.y;
+        const difference = Math.atan2(
+            Math.sin(targetRotation - angle),
+            Math.cos(targetRotation - angle)
+        );
+        playerModel.rotation.y = THREE.MathUtils.lerp(
+            angle,
+            angle + difference,
+            1 - Math.exp(-15 * dt)
+        );
+
+        // Laboratorium 6 - Sekcja 2.2.3: Animacja skoku postaci
+        if (jumpTime > 0) {
+            jumpTime = Math.max(0, jumpTime - dt);
+            const progress = 1 - jumpTime / JUMP_DURATION;
+            playerModel.position.x = THREE.MathUtils.lerp(jumpStartX, 0, progress);
+            playerModel.position.z = THREE.MathUtils.lerp(jumpStartZ, 0, progress);
+            playerModel.position.y = Math.sin(progress * Math.PI) * 0.12;
         }
     }
     // Laboratorium 5 - Sekcja 3.1.3 oraz 5.5: Aktualizacja kamery śledzącej i generowanie świata
@@ -167,13 +201,29 @@ function frame(time) {
 }
 requestAnimationFrame(frame);
 
+// Kąty obrotu dla poszczególnych klawiszy strzałek
+const angles = {
+    'ArrowUp': Math.PI / 2,
+    'ArrowDown': -Math.PI / 2,
+    'ArrowLeft': Math.PI,
+    'ArrowRight': 0
+};
+
 window.addEventListener('keydown', event => {
     // Laboratorium 5 - Sekcja 8.4 & 8.5: Obsługa restartu gry
     if (event.code === 'KeyR') {
         if (event.repeat) return;
         restartGame();
+        // Laboratorium 6 - Sekcja 2.2.4: Wyzerowanie animacji po restarcie gry
+        jumpTime = 0;
+        playerModel.position.y = 0;
+        playerModel.position.x = 0;
+        playerModel.position.z = 0;
         // Zadanie 2: Po restarcie przywrócenie początkowej orientacji przodem do drogi
         rotatePlayer('ArrowUp');
+        targetRotation = angles['ArrowUp'];
+        jumpStartX = 0;
+        jumpStartZ = 0;
         if (carsPaused) toggleCarsPaused();
         if (GAME_MODE === 'endless') {
             resetWorld(scene3D, carTemplate, treeTemplate);
@@ -195,9 +245,21 @@ window.addEventListener('keydown', event => {
     event.preventDefault();
     if (event.repeat || gameState.status !== 'playing' || isPaused) return;
 
+    // Laboratorium 6 - Sekcja 2.2.2: Zapamiętanie pozycji przed ruchem
+    const oldX = scene.player.position[0];
+    const oldZ = scene.player.position[2];
+
     // Przesunięcie gracza (bez zmian w logice poruszania)
     movePlayer(event.key);
 
-    // Laboratorium 4 - Zadanie 2: Automatyczna zmiana orientacji postaci w kierunku wciśniętej strzałki
-    rotatePlayer(event.key);
+    // Sprawdzenie, czy pozycja gracza rzeczywiście się zmieniła
+    if (scene.player.position[0] !== oldX || scene.player.position[2] !== oldZ) {
+        // Sekcja 2.1.3: Ustawienie docelowego kąta obrotu
+        targetRotation = angles[event.key];
+
+        // Sekcja 2.2.2: Zapamiętanie przesunięcia do animacji skoku
+        jumpStartX = playerModel.position.x + oldX - scene.player.position[0];
+        jumpStartZ = playerModel.position.z + oldZ - scene.player.position[2];
+        jumpTime = JUMP_DURATION;
+    }
 });

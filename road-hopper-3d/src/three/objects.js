@@ -10,14 +10,15 @@ export const GROUND_Y = -0.45;
 // Laboratorium 5 - Sekcja 5.1: Dodanie rows: new Map()
 export const objects = {
     playerRoot: null,
+    playerModel: null,
     cars: [],
     trees: [],
     rows: new Map(),
 };
 
-// Laboratorium 5 - Sekcja 5.2: Wspólna geometria oraz materiały dla pasów i linii (szerokość 2.4)
-const BOARD_WIDTH = 2.4;
-const rowGeometry = new THREE.BoxGeometry(BOARD_WIDTH, 0.04, 0.35);
+// Laboratorium 6 - Sekcja 3.1: Poszerzenie terenu planszy (szerokość 5.0)
+const BOARD_WIDTH = 5.0;
+const rowGeometry = new THREE.BoxGeometry(5.0, 0.04, 0.35);
 const rowMaterials = {
     road: new THREE.MeshBasicMaterial({ color: 0x30323a }),
     grass: new THREE.MeshBasicMaterial({ color: 0x2ba344 }),
@@ -36,7 +37,8 @@ export function addRowVisual(scene3D, row) {
     if (row.type === 'road' && previous?.type === 'road' &&
         Math.abs(previous.z - row.z - 0.35) < 0.001) {
         const lineZ = (previous.z + row.z) / 2;
-        for (let x = -1.05; x <= 1.05; x += 0.30) {
+        // Laboratorium 6 - Sekcja 3.2: Rozszerzenie zakresu oznaczeń jezdni
+        for (let x = -2.25; x <= 2.25; x += 0.30) {
             const line = new THREE.Mesh(lineGeometry, lineMaterial);
             line.position.set(x, GROUND_Y + 0.003, lineZ);
             root.add(line);
@@ -78,17 +80,23 @@ export function setPlayerModel(scene3D, characterTemplate) {
     }
     // Rozmiar 0.55 zapewnia odpowiednią widoczność modelu (wysokość ~0.37)
     // i gwarantuje, że model mieści się na pasie ruchu (głębokość postaci w osi Z to ~0.14)
-    const playerRoot = makeInstance(characterTemplate, 0.55);
+    // playerRoot jest zakotwiczony w siatce świata (syncObjects), a playerModel odpowiada za lokalne animacje (skok, obrót)
+    const playerRoot = new THREE.Group();
+    const playerModel = makeInstance(characterTemplate, 0.55);
+    playerRoot.add(playerModel);
     scene3D.add(playerRoot);
     objects.playerRoot = playerRoot;
+    objects.playerModel = playerModel;
 
     // Początkowa orientacja: przodem w kierunku marszu (Zadanie 2)
     rotatePlayer('ArrowUp');
+    return playerModel;
 }
 
 // Laboratorium 4 - Zadanie 2: Automatyczna zmiana orientacji modelu gracza podczas poruszania się
 export function rotatePlayer(key) {
-    if (!objects.playerRoot) return;
+    const target = objects.playerModel || objects.playerRoot;
+    if (!target) return;
 
     // Ponieważ model character.glb naturalnie patrzy w osi +X:
     // - ArrowUp (w stronę drogi, -Z): obrót o +90° (Math.PI / 2)
@@ -103,7 +111,7 @@ export function rotatePlayer(key) {
     };
 
     if (angles[key] !== undefined) {
-        objects.playerRoot.rotation.y = angles[key];
+        target.rotation.y = angles[key];
     }
 }
 

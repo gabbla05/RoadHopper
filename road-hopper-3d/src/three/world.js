@@ -46,19 +46,31 @@ export function extendWorld(scene3D, carTemplate, treeTemplate) {
         rows.push(row);
         addRowVisual(scene3D, row);
 
-        // Sekcja 6.3: Dynamiczne tworzenie aut i drzew
+        // Sekcja 6.3 & Laboratorium 6 - Sekcja 3.4: Dynamiczne tworzenie aut (do 3 na pas) i drzew
         if (type === 'road') {
             const direction = Math.random() < 0.5 ? -1 : 1;
-            // Lekko przyspieszona prędkość aut dla lepszej dynamiki
+            // Wspólna prędkość bazowa dla wszystkich aut na tym pasie
             const baseSpeed = direction * (0.18 + Math.random() * 0.12);
-            const car = {
-                position: [Math.random() * 1.8 - 0.9, 0, row.z],
-                speed: baseSpeed * (gameState.speedMultiplier || 1),
-                baseSpeed,
-                laneIndex: index
-            };
-            gameScene.cars.push(car);
-            addCarVisual(scene3D, car, carTemplate);
+            // Do 3 samochodów na pas z zachowaniem bezpiecznych, równomiernych odstępów
+            const numCars = Math.floor(Math.random() * 3) + 1;
+            const CAR_WRAP_BOUND = 2.70;
+            const spacing = (CAR_WRAP_BOUND * 2) / numCars;
+            const offset = (Math.random() * spacing) - CAR_WRAP_BOUND;
+
+            for (let i = 0; i < numCars; i++) {
+                let posX = offset + i * spacing;
+                if (posX > CAR_WRAP_BOUND) posX -= CAR_WRAP_BOUND * 2;
+                if (posX < -CAR_WRAP_BOUND) posX += CAR_WRAP_BOUND * 2;
+
+                const car = {
+                    position: [posX, 0, row.z],
+                    speed: baseSpeed * (gameState.speedMultiplier || 1),
+                    baseSpeed,
+                    laneIndex: index
+                };
+                gameScene.cars.push(car);
+                addCarVisual(scene3D, car, carTemplate);
+            }
         } else {
             // Laboratorium 5 - Zadanie 1: Losowa liczba drzew (1-3) gwarantująca wolne przejścia
             const numTrees = Math.floor(Math.random() * 3) + 1;
